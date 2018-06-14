@@ -1,0 +1,17 @@
+#!/bin/sh
+
+dir=$(dirname $0)
+script="$dir/agent-arista.pl"
+
+(cd $dir && carton check > /dev/null 2>&1)
+if [ "$?" -ne "0" ]; then
+	echo "Perl modules are incomplete!"
+	exit 255
+fi
+
+if [ ! -x $script ]; then
+	echo "$script not found!"
+	exit 255
+else
+	carton exec $script $@
+fi
