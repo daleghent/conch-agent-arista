@@ -9,9 +9,11 @@ if [ "$?" -ne "0" ]; then
 	exit 255
 fi
 
+aristas=$(dhcp-lease-list --parsable | grep "Arista Networks" | awk '{print $4}')
+
 if [ ! -x $script ]; then
 	echo "$script not found!"
 	exit 255
 else
-	carton exec $script $@
+	carton exec $script $aristas
 fi

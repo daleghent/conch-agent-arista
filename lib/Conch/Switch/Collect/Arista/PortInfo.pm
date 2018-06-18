@@ -64,6 +64,18 @@ sub _parse_switch_portinfo
 
 		$poinfo->{id} = $id;
 		$poinfo->{name} = $port;
+		$poinfo->{desc} = $ifaces->{$port}{description};
+		$poinfo->{speed} = $ifaces->{$port}{bandwidth};
+		$poinfo->{duplex} = $ifaces->{$port}{duplex};
+		$poinfo->{status} = $ifaces->{$port}{linkStatus};
+		$poinfo->{proto_status} = $ifaces->{$port}{lineProtocolStatus};
+
+		if ($ifaces->{$port}{description} eq "") {
+			$poinfo->{desc} = undef;
+		} else {
+			$poinfo->{desc} =
+				$ifaces->{$port}{description};
+		}
 
 		if ($ifaces->{$port}{interfaceType} eq "Not Present") {
 			$poinfo->{type} = undef;

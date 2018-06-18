@@ -1,3 +1,4 @@
+requires 'JSON::XS';
 requires 'JSON::RPC::Client';
 requires 'LWP::Protocol::https';
 requires 'Data::Printer';

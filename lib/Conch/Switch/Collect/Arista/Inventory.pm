@@ -102,29 +102,48 @@ sub _parse_switch_inventory
 	}
 	$inventory->{fans} = \@funits;
 
-	# Port info - Information concerning physical ports
+	# Transceiver info - Information concerning physical ports and 
+	# any tranceiver information in them.
 	$i = 1;
-	my @ports = ( );
+	my @xcvrs = ( );
 
-	for my $port (values %{$data->{result}[1]{xcvrSlots}}) {
-		my $poinfo = { };
+	my $xcvrslots = $data->{result}[1]{xcvrSlots};
+	for my $xcvr (keys $xcvrslots->%*) {
+		my $xcvrinfo = { };
 
-		$poinfo->{port} = $i;
+		$xcvrinfo->{id} = $xcvr;
 
-		if ($port->{mfgName} eq "Not Present") {
-			$poinfo->{xcvr}{mgfr} = undef;
-			$poinfo->{xcvr}{model} = undef;
-			$poinfo->{xcvr}{hw_rev} = undef;
+		# The list of transceivers provided by 'sh inventory' 
+		# lacks any mention of what logical port they are associated
+		# with. We are left to assume that tranceiver "1" is the one
+		# for port "Ethernet1" and so-on. On a DCS-7160, this holds
+		# true but this might not always be the case in other models.
+		if ($inventory->{model} =~ /DCS-7160-48YC6/) {
+			$xcvrinfo->{port} = "Ethernet" . $xcvr;
+			if ($xcvr >= 49) {
+				$xcvrinfo->{port} .= '/1';
+			}
 		} else {
-			$poinfo->{xcvr}{mgfr} = $port->{mfgName};
-			$poinfo->{xcvr}{model} = $port->{modelName};
-			$poinfo->{xcvr}{hw_rev} = $port->{hardwareRev};
+			$xcvrinfo->{port} = undef;
 		}
 
-		push @ports, $poinfo;
+		if ($xcvrslots->{$xcvr}{mfgName} eq "Not Present") {
+			$xcvrinfo->{mgfr} = undef;
+			$xcvrinfo->{model} = undef;
+			$xcvrinfo->{hw_rev} = undef;
+			$xcvrinfo->{serial} = undef;
+		} else {
+			$xcvrinfo->{mgfr} = $xcvrslots->{$xcvr}{mfgName};
+			$xcvrinfo->{model} = $xcvrslots->{$xcvr}{modelName};
+			$xcvrinfo->{hw_rev} = $xcvrslots->{$xcvr}{hardwareRev};
+			$xcvrinfo->{serial} = $xcvrslots->{$xcvr}{serialNum};
+		}
+
+		push @xcvrs, $xcvrinfo;
 		$i++;
 	}
-	$inventory->{ports} = \@ports;
+	my @sorted = sort { $a->{id} <=> $b->{id} } @xcvrs;
+	$inventory->{xcvrs} = \@sorted;
 
 	return $inventory;
 }
