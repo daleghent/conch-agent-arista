@@ -23,7 +23,6 @@ sub _get_version
 	my $inventory = _parse_switch_version($response);
 
 	return $inventory;
-	
 }
 
 sub _query_switch_version

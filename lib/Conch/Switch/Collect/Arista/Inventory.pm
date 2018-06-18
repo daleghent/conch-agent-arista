@@ -23,7 +23,6 @@ sub _get_inventory
 	my $inventory = _parse_switch_inventory($response);
 
 	return $inventory;
-	
 }
 
 sub _query_switch_inventory

@@ -23,7 +23,6 @@ sub _get_portinfo
 	my $portinfo = _parse_switch_portinfo($response);
 
 	return $portinfo;
-	
 }
 
 sub _query_switch_portinfo

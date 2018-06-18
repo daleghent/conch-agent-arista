@@ -24,7 +24,6 @@ sub _get_envinfo
 	my $data = _parse_switch_envinfo($response);
 
 	return $data;
-	
 }
 
 sub _query_switch_envinfo
@@ -119,7 +118,7 @@ sub _parse_cooling
 			$id++;
 		}
 	}
-	
+
 	my @sorted = sort { $a->{id} <=> $b->{id} } @fans;
 	$output->{fans} = \@sorted;
 

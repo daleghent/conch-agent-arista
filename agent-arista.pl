@@ -123,7 +123,7 @@ sub process_switch
 		headers => {
 			"Content-Type" => "application/json",
 		},
-    	},
+	},
 	);
 
 	print $response->{content},"\n";
@@ -148,8 +148,8 @@ sub process_switch
 
 	my $val = HTTP::Tiny->new->post(
 		"http://127.0.0.1/pass/device/" .
-  	    	$inventory->{serial} .
-	    	"/settings/build.validated" => {
+		$inventory->{serial} .
+		"/settings/build.validated" => {
 			content => encode_json($valid),
 			headers => {
 				"Content-Type" => "application/json",
@@ -236,7 +236,7 @@ sub proc_cooling
 		my $i = 0;
 		for my $ifan ($inventory->{fans}->@*) {
 			next if ($efan->{location} ne 'fan_tray');
-	
+
 			if (($ifan->{slot} - 1) == $efan->{id}) {
 				$inventory->{fans}[$i]{status} =
 					$efan->{status};
