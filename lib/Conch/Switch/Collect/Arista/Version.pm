@@ -54,7 +54,6 @@ sub _parse_switch_version
 {
 	my $data = shift;
 	my $version = { };
-	my $i;
 
 	#
 	# Basic version info from 'show version'
