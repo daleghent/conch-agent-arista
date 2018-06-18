@@ -1,5 +1,7 @@
 #!/bin/sh
 
+SWITCH_JSON="/var/tmp/switch_boot.json"
+
 dir=$(dirname $0)
 script="$dir/agent-arista.pl"
 
@@ -9,7 +11,7 @@ if [ "$?" -ne "0" ]; then
 	exit 255
 fi
 
-aristas=$(dhcp-lease-list --parsable | grep "Arista Networks" | awk '{print $4}')
+aristas=$(jq -r '.[] | select(.vendor=="arista") | .ip_address' ${SWITCH_JSON})
 
 if [ ! -x $script ]; then
 	echo "$script not found!"
