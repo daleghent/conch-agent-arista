@@ -5,7 +5,7 @@ use warnings;
 
 use lib './lib';
 
-use JSON::PP;
+use JSON::XS;
 use HTTP::Tiny;
 use Time::Piece;
 use Data::Validate::IP;
@@ -68,14 +68,15 @@ sub process_switch
 		'user' => 'conch',
 		'password' => 'preflight');
 
-	$inventory = $arista->get_inventory;
 	$envinfo = $arista->get_envinfo;
+	$inventory = $arista->get_inventory;
 	$portinfo = $arista->get_portinfo;
+
+	my $media = proc_media($inventory);
+	my $combinedports = proc_ports($portinfo, $inventory);
 
 	proc_cooling();
 	proc_temps();
-	proc_memory();
-	proc_boottime();
 
 	my %report = (
 		device_type	=> "switch",
@@ -84,7 +85,7 @@ sub process_switch
 		serial_number	=> $inventory->{serial},
 		bios_version	=> $inventory->{os_ver},
 		system_uuid	=> $inventory->{system_uuid},
-		uptime_since	=> $derived->{boot_time},
+		uptime_since	=> proc_boottime($inventory->{boot_time}),
 		state		=> $state,
 		processor	=> {
 			count	=> 1,
@@ -92,7 +93,7 @@ sub process_switch
 		},
 		memory		=> {
 			count	=> 1,
-			total	=> $derived->{mem_total},
+			total	=> proc_mem($inventory->{mem_total}),
 		},
 		fans		=> {
 			count	=> scalar $inventory->{fans}->@*,
@@ -109,14 +110,18 @@ sub process_switch
 			count	=> scalar $envinfo->{psus}->@*,
 			units	=> $envinfo->{psus},
 		},
-		ports		=> $portinfo->{ports},
+		media		=> $media,
+		ports		=> $combinedports->{ports},
 	);
 	
+	my $rjson = encode_json(\%report);
+
 	p(%report);
-	
+	print $rjson . "\n";
+
 	my $response = HTTP::Tiny->new->post(
 		"http://127.0.0.1/report" => {
-		content => encode_json(\%report),
+		content => $rjson,
 		headers => {
 			"Content-Type" => "application/json",
 		},
@@ -125,14 +130,19 @@ sub process_switch
 	
 	print $response->{content},"\n";
 	
-	my $json = JSON::PP->new();
+	my $json = JSON::XS->new();
 	my $msg = decode_json($response->{content});
 	my $rep = decode_json($msg->{message});
+
+	if ($rep->{error}) {
+		print "API replied with error: " . $rep->{error} . "\n";
+		next;
+	}
 	
 	# If the report API returns healthy, set the switch to validated.
 	# This allows the UI to display the proper icon for the switch, etc.
 	my $validated = 0;
-	if ($rep->{health} eq "PASS") {
+	if ($rep->{status} eq "pass") {
 		$validated = 1;
 	}
 	
@@ -159,12 +169,14 @@ sub process_switch
 # The reserved portion seems to be constant, leaving us with 7900080KB.
 # If we have that value, we'll assume we have the full 8GB.
 #
-sub proc_memory
+sub proc_mem
 {
-	if ($inventory->{mem_total} == 7900080) {
-		$derived->{mem_total} = 8;
+	my $mem_total = shift || 0;
+
+	if ($mem_total == 7900080) {
+		return 8;
 	} else {
-		$derived->{mem_total} = 0;
+		return 0;
 	}
 }
 
@@ -209,8 +221,10 @@ sub proc_temps
 #
 sub proc_boottime
 {
-	my $t = localtime($inventory->{boot_time});
-	$derived->{boot_time} = $t->strftime("%F %T%z");
+	my $time = shift;
+
+	my $t = localtime($time);
+	return $t->strftime("%F %T%z");
 }
 
 #
@@ -253,3 +267,52 @@ sub proc_cooling
 	}
 }
 
+#
+# Combine port info ('sh int status') with its transceiver info from
+# 'sh inventory'. This will one day replace 'media' in the report.
+#
+sub proc_ports
+{
+	my $portinfo = shift;
+	my $xcvrinfo = shift;
+
+	my @ports = ();
+	my $output = { };
+
+	for my $port (@{$portinfo->{ports}}) {
+		my $new_port = $port;
+
+		XCVRS: for my $xcvr (@{$xcvrinfo->{xcvrs}}) {
+			next unless ($xcvr->{port});
+			my $new_xcvr = $xcvr;
+
+			if ($port->{name} eq $xcvr->{port}) {
+				delete $new_xcvr->{port};
+				delete $new_xcvr->{id};
+				$new_port->{xcvr} = $new_xcvr;
+
+				push @ports, $new_port;
+				last XCVRS;
+			}
+		}
+	}
+	$output->{ports} = \@ports;
+
+	return $output;
+}
+
+#
+# "The NicsNum validator counts switch ports from the 'media' attribute vs.
+# the 'interfaces' list for servers. Generate a 'media' tree for it to use.
+sub proc_media
+{
+	my $xcvrinfo = shift;
+
+	my $output = { };
+
+	for my $xcvr (@{$xcvrinfo->{xcvrs}}) {
+		$output->{$xcvr->{port}}{serial} = $xcvr->{serial};
+	}
+
+	return $output;
+}
