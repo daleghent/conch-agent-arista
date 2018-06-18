@@ -113,12 +113,10 @@ sub process_switch
 		media		=> $media,
 		ports		=> $combinedports->{ports},
 	);
-	
-	my $rjson = encode_json(\%report);
 
 	p(%report);
-	print $rjson . "\n";
 
+	my $rjson = encode_json(\%report);
 	my $response = HTTP::Tiny->new->post(
 		"http://127.0.0.1/report" => {
 		content => $rjson,
@@ -127,9 +125,9 @@ sub process_switch
 		},
     	},
 	);
-	
+
 	print $response->{content},"\n";
-	
+
 	my $json = JSON::XS->new();
 	my $msg = decode_json($response->{content});
 	my $rep = decode_json($msg->{message});
@@ -138,19 +136,19 @@ sub process_switch
 		print "API replied with error: " . $rep->{error} . "\n";
 		next;
 	}
-	
+
 	# If the report API returns healthy, set the switch to validated.
 	# This allows the UI to display the proper icon for the switch, etc.
 	my $validated = 0;
 	if ($rep->{status} eq "pass") {
 		$validated = 1;
 	}
-	
+
 	my $valid->{'build.validated'} = $validated;
-	
+
 	my $val = HTTP::Tiny->new->post(
 		"http://127.0.0.1/pass/device/" .
-  	    	$inventory->{serial} . 
+  	    	$inventory->{serial} .
 	    	"/settings/build.validated" => {
 			content => encode_json($valid),
 			headers => {
@@ -158,7 +156,7 @@ sub process_switch
 			},
 		},
 	);
-	
+
 	# print "$validated: " . $val->{content},"\n";
 }
 

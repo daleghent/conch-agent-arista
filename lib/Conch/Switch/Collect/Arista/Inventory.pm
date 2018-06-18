@@ -3,7 +3,6 @@ package Conch::Switch::Collect::Arista::Inventory;
 use strict;
 use warnings;
 
-use Data::Printer;
 use Conch::Switch::Collect::Arista::Query;
 
 use Exporter 'import';
@@ -102,7 +101,7 @@ sub _parse_switch_inventory
 	}
 	$inventory->{fans} = \@funits;
 
-	# Transceiver info - Information concerning physical ports and 
+	# Transceiver info - Information concerning physical ports and
 	# any tranceiver information in them.
 	$i = 1;
 	my @xcvrs = ( );
@@ -113,7 +112,7 @@ sub _parse_switch_inventory
 
 		$xcvrinfo->{id} = $xcvr;
 
-		# The list of transceivers provided by 'sh inventory' 
+		# The list of transceivers provided by 'sh inventory'
 		# lacks any mention of what logical port they are associated
 		# with. We are left to assume that tranceiver "1" is the one
 		# for port "Ethernet1" and so-on. On a DCS-7160, this holds

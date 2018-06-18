@@ -3,7 +3,6 @@ package Conch::Switch::Collect::Arista::PortInfo;
 use strict;
 use warnings;
 
-use Data::Printer;
 use Conch::Switch::Collect::Arista::Query;
 
 use Exporter 'import';
