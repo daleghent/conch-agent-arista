@@ -7,6 +7,7 @@ use Conch::Switch::Collect::Arista::Query;
 use Conch::Switch::Collect::Arista::Inventory;
 use Conch::Switch::Collect::Arista::PortInfo;
 use Conch::Switch::Collect::Arista::Environmental;
+use Conch::Switch::Collect::Arista::Version;
 
 sub new
 {
