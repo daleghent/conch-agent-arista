@@ -17,5 +17,5 @@ if [ ! -x $script ]; then
 	echo "$script not found!"
 	exit 255
 else
-	carton exec $script $aristas
+	carton exec -- $script $@ $aristas
 fi

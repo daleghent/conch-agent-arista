@@ -5,13 +5,13 @@ use warnings;
 
 use lib './lib';
 
+use Socket;
 use JSON::XS;
 use HTTP::Tiny;
 use Time::Piece;
+use Getopt::Std;
 use Data::Validate::IP;
 use Conch::Switch::Collect::Arista;
-
-use Data::Printer;
 
 # GLOBALS
 our $state = 'ONLINE';
@@ -20,11 +20,24 @@ our $inventory = { };
 our $envinfo = { };
 our $portinfo = { };
 
+our %opts;
 my @switches;
+
+getopts("Dh", \%opts);
+
+if ($opts{h}) {
+	usage();
+	exit 0;
+}
+
+if ($opts{D}) {
+	use Data::Printer;
+}
+
 if (@ARGV) {
 	@switches = @ARGV;
 } else {
-	print "Usage: $0 <ip> <ip> ...\n";
+	usage();
 	exit 1;
 }
 
@@ -114,7 +127,7 @@ sub process_switch
 		ports		=> $combinedports->{ports},
 	);
 
-	p(%report);
+	p(%report) if ($opts{D});
 
 	my $rjson = encode_json(\%report);
 	my $response = HTTP::Tiny->new->post(
@@ -126,7 +139,9 @@ sub process_switch
 	},
 	);
 
-	print $response->{content},"\n";
+	if ($opts{D}) {
+		print $response->{content},"\n";
+	}
 
 	my $json = JSON::XS->new();
 	my $msg = decode_json($response->{content});
@@ -148,8 +163,8 @@ sub process_switch
 
 	my $val = HTTP::Tiny->new->post(
 		"http://127.0.0.1/pass/device/" .
-		$inventory->{serial} .
-		"/settings/build.validated" => {
+		    $inventory->{serial} .
+		    "/settings/build.validated" => {
 			content => encode_json($valid),
 			headers => {
 				"Content-Type" => "application/json",
@@ -157,7 +172,9 @@ sub process_switch
 		},
 	);
 
-	# print "$validated: " . $val->{content},"\n";
+	if ($opts{D}) {
+		print "$validated: " . $val->{content},"\n";
+	}
 }
 
 #
@@ -277,8 +294,13 @@ sub proc_ports
 	my @ports = ();
 	my $output = { };
 
-	for my $port (@{$portinfo->{ports}}) {
-		my $new_port = $port;
+	PORTS: for my $port (@{$portinfo->{ports}}) {
+		delete $port->{id} if ($port->{id});
+
+		if ($port->{name} !~ /Ethernet\d+/) {
+			push @ports, $port;
+			next PORTS;
+		}
 
 		XCVRS: for my $xcvr (@{$xcvrinfo->{xcvrs}}) {
 			next unless ($xcvr->{port});
@@ -287,9 +309,9 @@ sub proc_ports
 			if ($port->{name} eq $xcvr->{port}) {
 				delete $new_xcvr->{port};
 				delete $new_xcvr->{id};
-				$new_port->{xcvr} = $new_xcvr;
+				$port->{xcvr} = $new_xcvr;
 
-				push @ports, $new_port;
+				push @ports, $port;
 				last XCVRS;
 			}
 		}
@@ -313,4 +335,13 @@ sub proc_media
 	}
 
 	return $output;
+}
+
+#
+# Usage
+sub usage
+{
+	print "Usage: $0 [OPTION] [IP]...\n";
+	print "\t-D\tDebug output - print report structure\n";
+	print "\t-h\tThis message\n";
 }
